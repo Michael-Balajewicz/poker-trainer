@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { legalActions, potSize } from '../engine/hand.ts'
 import type { Action, GameState } from '../engine/types.ts'
 import { formatChips } from '../utils/format.ts'
@@ -22,19 +22,20 @@ export default function ActionBar({ game, onAction, disabled = false }: Props) {
   const min = raiseOption && 'min' in raiseOption ? raiseOption.min : 0
   const max = raiseOption && 'max' in raiseOption ? raiseOption.max : 0
 
-  // null means "not touched yet", so the slider follows the minimum until the
-  // player actually moves it.
-  const [chosen, setChosen] = useState<number | null>(null)
+  // An identity for "this exact decision". When it changes, whatever the
+  // player had dialled in belongs to a previous spot and must be forgotten.
+  const spot = `${game.handNumber}:${game.street}:${game.currentTurn}:${game.betToCall}`
 
-  // A new decision is a new spot, so forget whatever was dialled in for the
-  // last one. Without this the slider would carry a stale amount across
-  // streets.
-  useEffect(() => {
-    setChosen(null)
-  }, [game.currentTurn, game.street, game.betToCall, game.handNumber])
+  // The chosen amount is stored together with the spot it was chosen for, so a
+  // stale value can simply be ignored during render. The obvious alternative --
+  // an effect that resets the value when the spot changes -- would set state
+  // during an effect and trigger a second render pass for no reason. Deriving
+  // is both simpler and what React actually wants here.
+  const [chosen, setChosen] = useState<{ spot: string; value: number } | null>(null)
 
   const clamp = (value: number) => Math.min(Math.max(Math.round(value), min), max)
-  const amount = chosen === null ? min : clamp(chosen)
+  const amount = chosen !== null && chosen.spot === spot ? clamp(chosen.value) : min
+  const setAmount = (value: number) => setChosen({ spot, value })
 
   const pot = potSize(game)
   // Pot-fraction shortcuts must be rounded and clamped: an unclamped 1/2-pot
@@ -96,7 +97,7 @@ export default function ActionBar({ game, onAction, disabled = false }: Props) {
             step={1}
             value={amount}
             disabled={disabled}
-            onChange={(event) => setChosen(Number(event.target.value))}
+            onChange={(event) => setAmount(Number(event.target.value))}
             className="h-2 min-w-40 flex-1 cursor-pointer accent-emerald-500"
             aria-label="Bet size"
           />
@@ -111,7 +112,7 @@ export default function ActionBar({ game, onAction, disabled = false }: Props) {
                 key={label}
                 type="button"
                 disabled={disabled}
-                onClick={() => setChosen(fractionTo(fraction))}
+                onClick={() => setAmount(fractionTo(fraction))}
                 className="rounded border border-white/15 px-2 py-1 text-xs text-white/70 hover:bg-white/10"
               >
                 {label}
@@ -120,7 +121,7 @@ export default function ActionBar({ game, onAction, disabled = false }: Props) {
             <button
               type="button"
               disabled={disabled}
-              onClick={() => setChosen(max)}
+              onClick={() => setAmount(max)}
               className="rounded border border-white/15 px-2 py-1 text-xs text-white/70 hover:bg-white/10"
             >
               All in
