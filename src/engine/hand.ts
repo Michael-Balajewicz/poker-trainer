@@ -21,6 +21,7 @@ import { describeScore, evaluate7 } from './evaluate.ts'
 import { buildPots, splitPot } from './pots.ts'
 import { mulberry32, nextSeed, shuffle } from './rng.ts'
 import type {
+  BettingState,
   Action,
   GameState,
   LegalAction,
@@ -177,7 +178,7 @@ function nextOccupied(seats: readonly Seat[], from: number): number {
 // Legal actions
 // ---------------------------------------------------------------------------
 
-export function legalActions(state: GameState): LegalAction[] {
+export function legalActions(state: BettingState): LegalAction[] {
   const turn = state.currentTurn
   if (turn === null || state.result !== null) return []
 
@@ -446,11 +447,11 @@ function settle(state: GameState): void {
 // ---------------------------------------------------------------------------
 
 /** Every chip in the middle, including the current street's bets. */
-export const potSize = (state: GameState): number =>
+export const potSize = (state: BettingState): number =>
   state.seats.reduce((sum, seat) => sum + seat.committedThisHand, 0)
 
 /** What the seat to act must put in to call. */
-export function amountToCall(state: GameState, seatId: number): number {
+export function amountToCall(state: BettingState, seatId: number): number {
   const seat = state.seats[seatId]
   return Math.max(0, Math.min(state.betToCall - seat.committedThisStreet, seat.stack))
 }

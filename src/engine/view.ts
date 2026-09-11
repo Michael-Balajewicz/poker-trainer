@@ -12,9 +12,9 @@
 // multiplayer -- right shape, different location.
 
 import type { Card } from './cards.ts'
-import type { GameState, Seat } from './types.ts'
+import type { BettingState, GameState, Seat } from './types.ts'
 
-export type PlayerView = Omit<GameState, 'deck' | 'deckIndex'> & { heroSeat: number }
+export type PlayerView = BettingState & { heroSeat: number }
 
 const copyHole = (cards: readonly Card[] | null): [Card, Card] | null =>
   cards === null ? null : [cards[0], cards[1]]

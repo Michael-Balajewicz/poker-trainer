@@ -48,7 +48,7 @@ export const categoryOf = (score: number): number => score >> 20
  * a straight, and ANDing the mask with four shifted copies of itself leaves a
  * bit set exactly where such a run begins.
  */
-function straightHigh(rankMask: number): number {
+export function straightHigh(rankMask: number): number {
   const shifted = (rankMask << 1) | ((rankMask >> 12) & 1)
   const runs = shifted & (shifted >> 1) & (shifted >> 2) & (shifted >> 3) & (shifted >> 4)
   if (runs === 0) return -1

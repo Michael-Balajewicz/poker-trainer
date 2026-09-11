@@ -136,6 +136,16 @@ export type GameState = {
   result: HandResult | null
 }
 
+/**
+ * Everything needed to reason about the betting -- GameState minus the parts a
+ * player is not allowed to see.
+ *
+ * Functions like legalActions() take this rather than a full GameState so that
+ * bots and the coach, which only ever receive a redacted PlayerView, can call
+ * them too. A GameState satisfies it by simply having more fields.
+ */
+export type BettingState = Omit<GameState, 'deck' | 'deckIndex'>
+
 export type TableConfig = {
   seatCount: number
   startingStack: number
