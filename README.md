@@ -1,32 +1,57 @@
-# React + TypeScript + Vite
+# Poker Trainer
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Play offline 9-handed No-Limit Texas Hold'em against bot opponents, with a **coach** you can
+consult to check whether a decision was correct.
 
-Currently, two official plugins are available:
+## Running it
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm install
+npm run dev
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+Then open the URL Vite prints (usually http://localhost:5173).
+
+> **Note:** opening a built `dist/index.html` directly by double-clicking will *not* work.
+> Vite emits `<script type="module">`, and browsers block ES modules over `file://`. Use
+> `npm run dev` or `npm run preview`.
+
+## Scripts
+
+| Script | What it does |
+|---|---|
+| `npm run dev` | Dev server with hot reload |
+| `npm run build` | Type-check (`tsc -b`) then build to `dist/` |
+| `npm run preview` | Serve the built `dist/` locally |
+| `npm test` | Run the engine, evaluator, and equity tests once |
+| `npm run test:watch` | Same, in watch mode |
+| `npm run lint` | oxlint |
+
+## How it's put together
+
+`engine/`, `bots/`, and `coach/` are pure TypeScript with no React — the rules are testable
+on their own, and the coach can be improved without touching the UI.
+
+```
+src/
+├── engine/      # cards, hand evaluator, betting state machine, side pots
+├── bots/        # opponent decision logic
+├── coach/       # preflop charts + Monte Carlo equity
+├── components/  # React UI
+└── utils/       # formatting helpers
+```
+
+## About the coach
+
+It is **not** a solver. It judges decisions on raw equity and pot odds: preflop it uses a
+positional range chart, postflop it runs a Monte Carlo simulation and compares your equity
+against the pot odds you're being offered.
+
+Its known limits — random opponent hands rather than realistic ranges, no future-street
+planning, a guessed fold-equity number — are listed in the app itself, so you can trust the
+numbers exactly as much as they deserve.
+
+## Deploying
+
+It's a static site with no backend. `npm run build` produces `dist/`, which can be dropped
+on Netlify or deployed from this repo via Vercel. No environment variables required.
