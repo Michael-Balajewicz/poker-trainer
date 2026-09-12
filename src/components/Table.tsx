@@ -36,7 +36,7 @@ export default function Table({ game, heroSeat }: Props) {
   const showdownSeats = new Set(game.result?.showdown?.map((entry) => entry.seat) ?? [])
 
   return (
-    <div className="relative aspect-16/10 w-full min-h-[520px]">
+    <div className="relative aspect-16/10 w-full min-h-[400px] lg:min-h-[520px]">
       {/* Felt */}
       <div className="absolute inset-[13%] rounded-[50%] border-[10px] border-rail-800 bg-linear-to-b from-felt-700 to-felt-900 shadow-2xl shadow-black/60 ring-1 ring-black/40" />
 
@@ -56,7 +56,7 @@ export default function Table({ game, heroSeat }: Props) {
       </div>
 
       {/* Seat layer: inset by half a seat box so nothing overflows the table. */}
-      <div className="absolute inset-x-[68px] inset-y-[62px]">
+      <div className="absolute inset-x-[52px] inset-y-[52px] lg:inset-x-[68px] lg:inset-y-[62px]">
         {game.seats.map((seat) => (
           <div
             key={seat.id}

@@ -16,7 +16,7 @@ type Props = {
 export default function SeatView({ seat, position, isButton, isTurn, revealed, won }: Props) {
   if (seat.status === 'out') {
     return (
-      <div className="w-32 rounded-lg border border-white/5 bg-black/20 px-2 py-1.5 text-center text-xs text-white/25">
+      <div className="w-24 rounded-lg border border-white/5 bg-black/20 px-1.5 py-1 text-center text-[10px] text-white/25 lg:w-32 lg:px-2 lg:py-1.5 lg:text-xs">
         {seat.name}
         <div>busted</div>
       </div>
@@ -27,7 +27,7 @@ export default function SeatView({ seat, position, isButton, isTurn, revealed, w
 
   return (
     <div
-      className={`relative w-32 rounded-lg border px-2 py-1.5 text-center transition-colors ${
+      className={`relative w-24 rounded-lg border px-1.5 py-1 text-center transition-colors lg:w-32 lg:px-2 lg:py-1.5 ${
         isTurn
           ? 'border-amber-300 bg-amber-300/15 shadow-lg shadow-amber-300/20'
           : 'border-white/10 bg-black/40'
