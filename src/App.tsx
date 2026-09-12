@@ -1,12 +1,16 @@
-import { useEffect, useReducer, useState } from 'react'
+import { useEffect, useMemo, useReducer, useState } from 'react'
 import { decideAction } from './bots/decide.ts'
 import { profileForSeat } from './bots/profiles.ts'
+import type { Advice, Verdict } from './coach/coach.ts'
+import { getAdvice, judgeAction } from './coach/coach.ts'
 import ActionBar from './components/ActionBar.tsx'
+import CoachPanel from './components/CoachPanel.tsx'
 import HandLog from './components/HandLog.tsx'
 import Table from './components/Table.tsx'
 import { applyAction, nextHand, startTable } from './engine/hand.ts'
 import { mulberry32 } from './engine/rng.ts'
 import type { Action, GameState, TableConfig } from './engine/types.ts'
+import type { PlayerView } from './engine/view.ts'
 import { playerView } from './engine/view.ts'
 import { formatChips } from './utils/format.ts'
 
@@ -70,6 +74,14 @@ export default function App() {
     error: null,
   }))
   const [speed, setSpeed] = useState(SPEEDS[1].ms)
+  const [hintMode, setHintMode] = useState(false)
+
+  // To review a decision after the fact we need the table as it was BEFORE the
+  // action, so it is captured at the moment the action is taken.
+  const [lastDecision, setLastDecision] = useState<{ view: PlayerView; action: Action } | null>(
+    null,
+  )
+  const [verdict, setVerdict] = useState<Verdict | null>(null)
 
   const turn = game.currentTurn
   // Derived, not stored. Anything computable from the game state is worked out
@@ -78,6 +90,14 @@ export default function App() {
   const isBotTurn = turn !== null && !handOver && !game.seats[turn].isHuman
   const isHeroTurn = turn !== null && !handOver && game.seats[turn].isHuman
   const hero = game.seats[HERO_SEAT]
+
+  // Running a few thousand simulations on every render would be wasteful, and
+  // the answer only changes when the spot does -- which is exactly what useMemo
+  // is for.
+  const hint: Advice | null = useMemo(
+    () => (hintMode && isHeroTurn ? getAdvice(playerView(game, HERO_SEAT)) : null),
+    [hintMode, isHeroTurn, game],
+  )
 
   useEffect(() => {
     if (!isBotTurn || turn === null) return
@@ -99,9 +119,20 @@ export default function App() {
     // which is what stops the timer from ever reading a stale game.
   }, [game, isBotTurn, turn, speed])
 
+  const takeAction = (action: Action) => {
+    setLastDecision({ view: playerView(game, HERO_SEAT), action })
+    setVerdict(null)
+    dispatch({ type: 'act', action })
+  }
+
+  const clearCoach = () => {
+    setLastDecision(null)
+    setVerdict(null)
+  }
+
   return (
     <main className="min-h-dvh bg-felt-900 text-white">
-      <div className="mx-auto flex max-w-7xl flex-col gap-4 p-4">
+      <div className="mx-auto flex max-w-[1500px] flex-col gap-4 p-4">
         <header className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="text-xl font-semibold tracking-tight">Poker Trainer</h1>
@@ -131,7 +162,10 @@ export default function App() {
             </div>
             <button
               type="button"
-              onClick={() => dispatch({ type: 'new-table', seed: randomSeed() })}
+              onClick={() => {
+                clearCoach()
+                dispatch({ type: 'new-table', seed: randomSeed() })
+              }}
               className="rounded-md border border-white/15 px-3 py-1.5 text-xs text-white/70 hover:bg-white/10"
             >
               New table
@@ -145,36 +179,54 @@ export default function App() {
           </div>
         )}
 
-        <div className="grid gap-4 lg:grid-cols-[1fr_280px]">
-          <Table game={game} heroSeat={HERO_SEAT} />
-          <div className="h-64 lg:h-auto">
-            <HandLog game={game} />
+        <div className="grid gap-4 xl:grid-cols-[1fr_340px]">
+          <div className="flex flex-col gap-4">
+            <Table game={game} heroSeat={HERO_SEAT} />
+
+            {handOver ? (
+              <div className="flex flex-wrap items-center gap-3 rounded-lg border border-white/10 bg-black/30 p-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    clearCoach()
+                    dispatch({ type: 'next-hand' })
+                  }}
+                  disabled={hero.stack === 0}
+                  className="rounded-md bg-emerald-700 px-4 py-2 text-sm font-semibold hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Next hand
+                </button>
+                <span className="text-sm text-white/60">
+                  {hero.stack === 0
+                    ? 'You are out of chips. Start a new table to keep playing.'
+                    : `Your stack: ${formatChips(hero.stack)}`}
+                </span>
+              </div>
+            ) : (
+              <ActionBar game={game} onAction={takeAction} disabled={!isHeroTurn} />
+            )}
+          </div>
+
+          <div className="flex flex-col gap-4 xl:h-[calc(100dvh-7rem)]">
+            <div className="min-h-80 flex-1">
+              <CoachPanel
+                verdict={verdict}
+                hint={hint}
+                canReview={lastDecision !== null}
+                onReview={() => {
+                  if (lastDecision !== null) {
+                    setVerdict(judgeAction(lastDecision.view, lastDecision.action))
+                  }
+                }}
+                hintMode={hintMode}
+                onHintModeChange={setHintMode}
+              />
+            </div>
+            <div className="h-56 shrink-0">
+              <HandLog game={game} />
+            </div>
           </div>
         </div>
-
-        {handOver ? (
-          <div className="flex flex-wrap items-center gap-3 rounded-lg border border-white/10 bg-black/30 p-3">
-            <button
-              type="button"
-              onClick={() => dispatch({ type: 'next-hand' })}
-              disabled={hero.stack === 0}
-              className="rounded-md bg-emerald-700 px-4 py-2 text-sm font-semibold hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              Next hand
-            </button>
-            <span className="text-sm text-white/60">
-              {hero.stack === 0
-                ? 'You are out of chips. Start a new table to keep playing.'
-                : `Your stack: ${formatChips(hero.stack)}`}
-            </span>
-          </div>
-        ) : (
-          <ActionBar
-            game={game}
-            onAction={(action) => dispatch({ type: 'act', action })}
-            disabled={!isHeroTurn}
-          />
-        )}
       </div>
     </main>
   )
