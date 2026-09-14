@@ -1,5 +1,6 @@
 import type { Seat } from '../engine/types.ts'
 import { formatChips } from '../utils/format.ts'
+import Avatar from './Avatar.tsx'
 import CardView from './CardView.tsx'
 
 type Props = {
@@ -13,75 +14,79 @@ type Props = {
   won: number
 }
 
-export default function SeatView({ seat, position, isButton, isTurn, revealed, won }: Props) {
-  if (seat.status === 'out') {
-    return (
-      <div className="w-24 rounded-lg border border-white/5 bg-black/20 px-1.5 py-1 text-center text-[10px] text-white/25 lg:w-32 lg:px-2 lg:py-1.5 lg:text-xs">
-        {seat.name}
-        <div>busted</div>
-      </div>
-    )
-  }
+const PILL = 'rounded-full px-1.5 text-[10px] leading-4 font-semibold tabular-nums'
 
+/**
+ * One player: hole cards tucked over a round avatar, a rounded name plate
+ * underneath, and a row for their chips and status.
+ *
+ * Every seat is exactly the same height whatever it is showing -- the bottom
+ * row is always there, even when empty. Seats are centred on the table's rail,
+ * so a seat that grew when a bet appeared would visibly jump.
+ */
+export default function SeatView({ seat, position, isButton, isTurn, revealed, won }: Props) {
+  const out = seat.status === 'out'
   const folded = seat.status === 'folded'
 
   return (
     <div
-      className={`relative w-24 rounded-lg border px-1.5 py-1 text-center transition-colors lg:w-32 lg:px-2 lg:py-1.5 ${
-        isTurn
-          ? 'border-amber-300 bg-amber-300/15 shadow-lg shadow-amber-300/20'
-          : 'border-white/10 bg-black/40'
-      } ${folded ? 'opacity-40' : ''}`}
+      className={`flex w-24 flex-col items-center lg:w-28 ${
+        out ? 'opacity-25' : folded ? 'opacity-40' : ''
+      }`}
     >
-      {isButton && (
-        <span
-          className="absolute -top-2 -right-2 grid h-5 w-5 place-items-center rounded-full bg-white text-[10px] font-bold text-slate-900"
-          title="Dealer button"
-        >
-          D
-        </span>
-      )}
-
-      <div className="flex justify-center gap-1 pb-1">
-        {seat.holeCards === null ? (
-          <>
-            <CardView card={null} size="sm" />
-            <CardView card={null} size="sm" />
-          </>
-        ) : (
+      {/* Hole cards, drawn over the top edge of the avatar. */}
+      <div className="relative z-10 flex h-10 gap-0.5">
+        {seat.holeCards !== null &&
           seat.holeCards.map((card, i) => (
             <CardView key={i} card={card} hidden={!revealed} size="sm" />
-          ))
+          ))}
+      </div>
+
+      <div className="relative -mt-2 lg:-mt-2.5">
+        <Avatar name={seat.name} seatId={seat.id} isHuman={seat.isHuman} isTurn={isTurn} />
+        {isButton && (
+          <span
+            className="absolute top-1/2 -right-2.5 grid h-5 w-5 -translate-y-1/2 place-items-center rounded-full bg-white text-[10px] font-bold text-slate-900 shadow"
+            title="Dealer button"
+          >
+            D
+          </span>
         )}
       </div>
 
-      <div className="truncate text-xs font-medium text-white/90">
-        {seat.name}
-        {position !== null && <span className="ml-1 text-white/40">{position}</span>}
+      {/* Name plate, overlapping the bottom edge of the avatar. */}
+      <div
+        className={`relative z-10 -mt-2 w-full rounded-full border bg-black/75 px-2 py-0.5 text-center lg:-mt-2.5 ${
+          isTurn ? 'border-amber-300/70' : 'border-white/10'
+        }`}
+      >
+        <div className="truncate text-[10px] leading-4 font-medium text-white/90 lg:text-[11px]">
+          {seat.name}
+          {position !== null && <span className="ml-1 text-white/40">{position}</span>}
+        </div>
+        <div
+          className={`text-[11px] leading-4 font-semibold tabular-nums lg:text-xs ${
+            out ? 'text-white/60' : 'text-chip-gold'
+          }`}
+        >
+          {out ? 'busted' : formatChips(seat.stack)}
+        </div>
       </div>
 
-      <div className="text-sm font-semibold tabular-nums text-chip-gold">
-        {formatChips(seat.stack)}
+      {/* Chips and status. Always rendered, so the seat never changes height. */}
+      <div className="mt-1 flex h-5 items-center justify-center gap-1">
+        {seat.status === 'allin' && <span className={`${PILL} bg-rose-600/80 text-white`}>ALL IN</span>}
+        {folded && <span className={`${PILL} bg-black/60 text-white/60`}>FOLDED</span>}
+        {won > 0 ? (
+          <span className={`${PILL} bg-emerald-600/80 text-white`}>+{formatChips(won)}</span>
+        ) : (
+          seat.committedThisStreet > 0 && (
+            <span className={`${PILL} bg-black/60 text-white/85`}>
+              {formatChips(seat.committedThisStreet)}
+            </span>
+          )
+        )}
       </div>
-
-      {seat.status === 'allin' && (
-        <div className="text-[10px] font-semibold uppercase tracking-wide text-rose-300">
-          All in
-        </div>
-      )}
-      {folded && <div className="text-[10px] uppercase tracking-wide text-white/40">Folded</div>}
-
-      {seat.committedThisStreet > 0 && (
-        <div className="mt-1 inline-block rounded-full bg-black/60 px-2 py-0.5 text-[11px] tabular-nums text-white/80">
-          {formatChips(seat.committedThisStreet)}
-        </div>
-      )}
-
-      {won > 0 && (
-        <div className="mt-1 text-[11px] font-semibold text-emerald-300">
-          +{formatChips(won)}
-        </div>
-      )}
     </div>
   )
 }

@@ -99,7 +99,7 @@ export default function Table({ game, heroSeat }: Props) {
     // Padding of half a seat box on every side. Seats are centred on the rail,
     // so without it the outermost seats would spill past the table area and
     // give the whole page a horizontal scrollbar.
-    <div className="px-12 py-[52px] lg:px-16 lg:py-[60px]">
+    <div className="px-12 py-[66px] lg:px-14 lg:py-[70px]">
       {/* The rail's box. Its aspect ratio comes from the same constant as the
           seat maths, so the two can never drift apart -- and because the ratio
           is fixed, the rounded ends stay true semicircles at any width. */}
